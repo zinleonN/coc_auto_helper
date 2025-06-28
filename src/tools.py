@@ -11,10 +11,13 @@ images_dir = src_dir / 'images'
 def fluctuate_number(n):
     if n == 0:
         return 0.0
-    magnitude = max(0.1, abs(n) / 10 * 2)
-    fluctuation = random.uniform(-magnitude, magnitude)
-    result = n + fluctuation
-    return round(result, 2)
+    n_abs = abs(n)
+    # 取数量级（个位、十位、百位...）
+    magnitude = 10 ** (len(str(int(n_abs))) - 1)
+    low = n - magnitude
+    high = n + magnitude
+    result = random.uniform(low, high)
+    return max(round(result, 2), 1)
 
 
 def sleep(n):

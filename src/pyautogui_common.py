@@ -25,14 +25,17 @@ def moveToRightDown():
     sleep(2)
     moveFromTo((3/4, 3/4), (1/4, 1/4))
 
-def locateImages(*image_names, confidence=0.8, color_sensitive=False):
+def locateImages(*image_names, confidence=0.8, color_sensitive=False, min_saturation=40):
     """
-    支持颜色敏感的图片定位。color_sensitive=True 时用OpenCV彩色模板匹配。
+    支持颜色敏感的图片定位。color_sensitive=True 时用OpenCV彩色（HSV）模板匹配，并排除灰色区域。
     :param image_names: 图片文件名
     :param confidence: 匹配置信度
     :param color_sensitive: 是否颜色敏感
+    :param min_saturation: 最小饱和度，低于此值视为灰色不算匹配
     :return: (left, top, width, height) 或 None
     """
+    import cv2
+    import numpy as np
     sleep(2.5)
     for name in image_names:
         path = image_path(name)
@@ -44,19 +47,27 @@ def locateImages(*image_names, confidence=0.8, color_sensitive=False):
                 if location:
                     return location
             else:
-                # 彩色敏感匹配
+                # 彩色敏感（HSV）匹配
                 screen = pa.screenshot()
                 screen = np.array(screen)
                 screen = cv2.cvtColor(screen, cv2.COLOR_RGB2BGR)
                 template = cv2.imread(path)
                 if template is None:
                     continue
-                res = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)
+                # 转为HSV
+                screen_hsv = cv2.cvtColor(screen, cv2.COLOR_BGR2HSV)
+                template_hsv = cv2.cvtColor(template, cv2.COLOR_BGR2HSV)
+                res = cv2.matchTemplate(screen_hsv, template_hsv, cv2.TM_CCOEFF_NORMED)
                 min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
                 if max_val >= confidence:
                     h, w = template.shape[:2]
                     left, top = max_loc
-                    return (left, top, w, h)
+                    # 取出匹配区域，判断饱和度
+                    matched = screen_hsv[top:top+h, left:left+w]
+                    if matched.shape[:2] == (h, w):
+                        mean_s = matched[...,1].mean()
+                        if mean_s >= min_saturation:
+                            return (left, top, w, h)
         except Exception as e:
             pass
     return None
