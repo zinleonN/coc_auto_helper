@@ -2,6 +2,7 @@ import pyautogui as pa
 import logging
 
 from src.tools import sleep
+from src.tools import detect_image
 import src.pyautogui_common as common
 
 def clickImage(*image_names, color_sensitive=False):
@@ -23,7 +24,7 @@ def clickImage(*image_names, color_sensitive=False):
 def ramdon_donate():
     pass
     army_name = [
-        "donate_army_miner","donate_army_archer", "donate_army_barbarian", "donate_army_giant", "donate_army_goblin", 
+        "donate_army_giant", "donate_army_miner","donate_army_archer", "donate_army_barbarian",  "donate_army_goblin", 
         "donate_army_wall_breaker", "donate_army_balloon", "donate_army_wizard", "donate_army_healer", 
         "donate_army_dragon", "donate_army_pekka", "donate_army_baby_dragon", "donate_army_miner",
         "donate_army_electro_dragon", "donate_army_yeti", "donate_army_dragon_rider", "donate_army_electro_titan", 
@@ -44,11 +45,11 @@ def attack():
     common.moveToRightUp()
 
     while clickImage("attack_army_special_goblin", color_sensitive=True) == 0:
-        common.moveFromTo((0.38, 0.13), (0.74, 0.60))
+        common.moveFromTo((0.47, 0.08), (0.87, 0.59))
 
 
     clickImage("attack_queen")
-    common.moveFromTo((0.24, 0.20), (0.24, 0.20))
+    common.moveFromTo((0.40, 0.13), (0.40, 0.13))
 
     logging.info("Waiting for attack to complete...")
     while True:
@@ -60,6 +61,7 @@ def attack():
         clickImage("attack_back")
         sleep(8)
         # TODO  Daily Rewards confirmation
+        clickImage("attack_confirm_resource")
         return
 
 def donate():
@@ -75,5 +77,10 @@ def donate():
         else:
             clickImage("donate_back")
             return 0
+        
+def detect():
+    sleep(1)
+    image = pa.screenshot()
+    detect_image(image)
         
 

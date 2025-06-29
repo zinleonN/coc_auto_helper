@@ -2,11 +2,14 @@ import random
 import time
 import os
 from pathlib import Path
+from ultralytics import YOLO
+import numpy as np
 
 
 
 src_dir = Path(__file__).parent
 images_dir = src_dir / 'images'
+model = YOLO(src_dir / 'best.pt')
 
 def fluctuate_number(n):
     if n == 0:
@@ -29,3 +32,6 @@ def image_path(name):
     path = images_dir / name
     return str(path.resolve()) if path.exists() else None
 
+def detect_image(image):
+    result = model(np.array(image), conf=0.3)
+    result[0].show()
