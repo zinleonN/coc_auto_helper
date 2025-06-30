@@ -24,15 +24,17 @@ def ramdon_donate():
 
 def donate():
     logging.info("Starting donation sequence...")
+    need_resource = False
 
     clickImage("donate_start")
 
     while True:
         if clickImage("donate_1") == 0:
             ramdon_donate()
+            need_resource = True
         elif clickImage("donate_locate") == 0:
             pass
         else:
             clickImage("donate_back")
-            return 0
+            return need_resource
         
