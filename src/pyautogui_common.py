@@ -1,39 +1,33 @@
 import pyautogui as pa
 import cv2
 import numpy as np
+import logging
 
 from src.tools import sleep
 from src.tools import image_path
 from src.tools import fluctuate_number
+from src.yolo.detect import calculate_avg_distance_to_line
 
-scrren_width, screen_height = pa.size()
 
+screen_width, screen_height = pa.size()
+
+def radio_to_actural(radio_x, radio_y):
+    return int(radio_x * screen_width), int(radio_y * screen_height)
 
 def moveToLeftUp():
-    sleep(2)
     moveFromTo((1/4, 1/4), (3/4, 3/4))
 
 def moveToLeftDown():
-    sleep(2)
     moveFromTo((1/4, 3/4), (3/4, 1/4))
 
 def moveToRightUp():
-    sleep(2)
     moveFromTo((3/4, 1/4), (1/4, 3/4))
 
 def moveToRightDown():
-    sleep(2)
     moveFromTo((3/4, 3/4), (1/4, 1/4))
 
+
 def locateImages(*image_names, confidence=0.8, color_sensitive=False, min_saturation=40):
-    """
-    支持颜色敏感的图片定位。color_sensitive=True 时用OpenCV彩色（HSV）模板匹配，并排除灰色区域。
-    :param image_names: 图片文件名
-    :param confidence: 匹配置信度
-    :param color_sensitive: 是否颜色敏感
-    :param min_saturation: 最小饱和度，低于此值视为灰色不算匹配
-    :return: (left, top, width, height) 或 None
-    """
     import cv2
     import numpy as np
     sleep(2.5)
@@ -72,28 +66,89 @@ def locateImages(*image_names, confidence=0.8, color_sensitive=False, min_satura
             pass
     return None
 
-def moveFromTo(start_ratio, end_ratio, duration=2):
-    """
-    根据屏幕比例坐标移动鼠标，可重复多次。
-    :param start_ratio: (x_ratio, y_ratio) 起始点比例
-    :param end_ratio: (x_ratio, y_ratio) 结束点比例
-    :param duration: 移动持续时间（秒）
-    :param repeat: 重复次数
-    """
-    screen_width, screen_height = pa.size()
+def clickImage(*image_names, color_sensitive=False):
+    # 限制输出图片名数量，避免日志过长
+    max_names = 5
+    names_display = image_names[:max_names]
+    names_str = ', '.join(str(n) for n in names_display)
+    if len(image_names) > max_names:
+        names_str += ', ...'
+    logging.info(f"Attempting to click on images: [{names_str}]")
+    location = locateImages(*image_names, color_sensitive=color_sensitive)
+    if location:
+        pa.moveTo(location, duration=0.2)
+        pa.click()
+        return 0
+    else:
+        logging.warning(f"Failed to find images: [{names_str}]")
+        return -1
 
+def moveFromTo(start_point, end_point, duration=0.8, holding=0.01):
     d = fluctuate_number(duration)
-    start_x = int(start_ratio[0] * screen_width)
-    start_y = int(start_ratio[1] * screen_height)
-    end_x = int(end_ratio[0] * screen_width)
-    end_y = int(end_ratio[1] * screen_height)
-    pa.moveTo(start_x, start_y, d)
+    start_x, start_y = radio_to_actural(start_point[0], start_point[1])
+    end_x, end_y = radio_to_actural(end_point[0], end_point[1])
+    
+
+    pa.moveTo(start_x, start_y, fluctuate_number(0.2))
     pa.mouseDown()
-    sleep(1)
+    sleep(holding)    
 
     pa.moveTo(end_x, end_y, d)
     pa.mouseUp()
-    sleep(0.5)
+    sleep(0.1)
 
 
+def detect_best_direction():
+    # 定义方向参数配置（移动函数/坐标参数/斜率）
+    directions_config = [
+        ("left_up", moveToLeftUp, (0.153, 0.575), -0.75),
+        ("left_down", moveToLeftDown, (0.338, 0.65), 0.74),
+        ("right_up", moveToRightUp, (0.657, 0.328), 0.74),
+        ("right_down", moveToRightDown, (0.699, 0.509), -0.75)
+    ]
+    
+    results = {}
+    MAX_DISTANCE = 420
+    
+    for name, move_func, coords, slope in directions_config:
+        sleep(0.5)
+        move_func()  # 执行方向移动
+        x, y = radio_to_actural(*coords)  # 解包坐标参数
+        distance = calculate_avg_distance_to_line(slope, x, y)
+        
+        logging.info(f"{name.title().replace('_', ' ')}: {distance}")
+        results[name] = distance
+    
+    # 寻找最小距离方向
+    best_direction, min_distance = min(results.items(), key=lambda x: x[1])
+    
+    if min_distance < MAX_DISTANCE:
+        logging.info(f"Best direction: {best_direction} with distance {min_distance}")
+        return best_direction
+    else:
+        logging.info(f"No valid direction (min distance {min_distance} >= {MAX_DISTANCE})")
+        return None
 
+def place_army(location, direction, need_locate):
+    if not location:
+        logging.error("No location provided for placing army.")
+        return
+    if direction == "left_up":
+        if need_locate: moveToLeftUp()
+        pa.click(location)
+        moveFromTo((0.526,0.104), (0.151,0.584), duration=2, holding=1)
+    elif direction == "left_down":
+        if need_locate: moveToLeftDown()
+        pa.click(location)
+        moveFromTo((0.128,0.281), (0.453,0.759), duration=2, holding=1)
+    elif direction == "right_up":
+        if need_locate: moveToRightUp()
+        pa.click(location)
+        moveFromTo((0.475,0.082), (0.843,0.572), duration=2, holding=1)
+    elif direction == "right_down":
+        if need_locate: moveToRightDown()
+        pa.click(location)
+        moveFromTo((0.863,0.294), (0.509,0.797), duration=2, holding=1)
+    else:
+        logging.error(f"Unknown direction: {direction}. Cannot place army.")
+        return
