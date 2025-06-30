@@ -1,8 +1,8 @@
 <div align="center">
-    <h1>Clash of Clans Helper</h1>
+    <h1>Clash of Clans Auto Helper</h1>
 </div>
 
-The project is mainly aimed at automating troop donations and resource farming in the Windows version of Clash of Clans.
+The project is mainly aimed at automating troop donations and resource farming in the Windows version of _Clash of Clans_.
 
 
 ![Under Construction](https://img.shields.io/badge/Status-WIP-orange)
@@ -18,11 +18,7 @@ The project is mainly aimed at automating troop donations and resource farming i
 
 ### Farm resources.
 
-- [x] Place Goblins using a fixed strategy.
-- [ ] Place Goblins based on the location of resource collectors.
+- [x] Place Goblins based on the location of resource collectors.
+- [ ] place troops by simulating human actions
 
 
-
-
-
-![detect_res](detection_results/detection_20250630_000404.png)
