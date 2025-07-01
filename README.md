@@ -22,3 +22,7 @@ The project is mainly aimed at automating troop donations and resource farming i
 - [ ] place troops by simulating human actions
 
 
+### Common 
+
+- [ ] User interface
+- [ ] 
