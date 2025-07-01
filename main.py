@@ -13,6 +13,8 @@ def back_to_game():
     for i in range(20):
         pyautogui.scroll(-500)
 
+
+
 def main():
     attack_needs = 1
     while True:
@@ -33,5 +35,6 @@ def main():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     back_to_game()
-    main()
+    main()  
+    
 

@@ -98,8 +98,14 @@ def moveFromTo(start_point, end_point, duration=0.8, holding=0.01):
     sleep(0.1)
 
 
-def detect_best_direction():
-    # 定义方向参数配置（移动函数/坐标参数/斜率）
+import asyncio
+import concurrent.futures
+import logging
+import pyautogui
+from functools import partial
+
+async def detect_best_direction():
+    """检测最佳方向，返回最佳方向的移动函数及其对应的映射点坐标"""
     directions_config = [
         ("left_up", moveToLeftUp, (0.153, 0.575), -0.75),
         ("left_down", moveToLeftDown, (0.338, 0.65), 0.74),
@@ -107,27 +113,56 @@ def detect_best_direction():
         ("right_down", moveToRightDown, (0.699, 0.509), -0.75)
     ]
     
-    results = {}
-    MAX_DISTANCE = 420
+    MAX_DISTANCE = screen_height * 0.265
+    results = {}  # 存储结果: {方向名称: (距离, 映射点列表, 移动函数)}
     
-    for name, move_func, coords, slope in directions_config:
-        sleep(0.5)
-        move_func()  # 执行方向移动
-        x, y = radio_to_actural(*coords)  # 解包坐标参数
-        distance = calculate_avg_distance_to_line(slope, x, y)
+    # 使用线程池执行CPU密集型任务
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        loop = asyncio.get_running_loop()
+        tasks = []
         
-        logging.info(f"{name.title().replace('_', ' ')}: {distance}")
-        results[name] = distance
+        for name, move_func, coords, slope in directions_config:
+            await asyncio.sleep(0.5)  # 等待一小段时间
+            
+            # 1. 执行方向移动
+            move_func()
+            
+            # 2. 截图
+            screenshot = pyautogui.screenshot()
+            
+            # 3. 计算坐标
+            x, y = radio_to_actural(*coords)
+            
+            # 4. 创建异步任务计算距离和映射点
+            task = loop.run_in_executor(
+                executor, 
+                partial(calculate_avg_distance_to_line, slope, x, y, screenshot)
+            )
+            tasks.append((name, move_func, task))  # 同时存储名称和移动函数
+        
+        # 等待所有任务完成并收集结果
+        for name, move_func, task in tasks:
+            distance, projected_points = await task
+            logging.info(f"{name.title().replace('_', ' ')}: {distance}")
+            results[name] = (distance, projected_points, move_func)
     
     # 寻找最小距离方向
-    best_direction, min_distance = min(results.items(), key=lambda x: x[1])
+    if not results:
+        logging.info("No valid results found")
+        return None, []
+    
+    # 找出最佳方向和最小距离
+    best_direction_name, (min_distance, min_projected_points, best_move_func) = min(
+        results.items(), 
+        key=lambda item: item[1][0]
+    )
     
     if min_distance < MAX_DISTANCE:
-        logging.info(f"Best direction: {best_direction} with distance {min_distance}")
-        return best_direction
+        logging.info(f"Best direction: {best_direction_name} with distance {min_distance}")
+        return best_move_func, min_projected_points  # 返回移动函数而不是名称
     else:
         logging.info(f"No valid direction (min distance {min_distance} >= {MAX_DISTANCE})")
-        return None
+        return None, []
 
 def place_army(location, direction, need_locate):
     if not location:

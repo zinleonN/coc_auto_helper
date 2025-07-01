@@ -1,5 +1,7 @@
+import asyncio
 import pyautogui as pa
 import logging
+import random
 
 
 from src.tools import sleep
@@ -19,35 +21,43 @@ attack_hero_names = [
         "attack_hero_archer_queen", "attack_hero_minion_prince" 
 ]
 
-def choose_suitable_attack_target():
+async def choose_suitable_attack_target():
    while True:
         while locateImages("attack_next_target") == None:
             sleep(1)
         for i in range(10):
             pa.scroll(-500)
-        best_direction = detect_best_direction()
-        if best_direction == None:
+        move_func, min_projected_points = await detect_best_direction()
+
+        if move_func == None:
             logging.info("No suitable attack target found.")
             clickImage("attack_next_target")
             continue
-        return best_direction
+        logging.info(f"best move function: {move_func.__name__}")
+        return move_func, min_projected_points
 
-def place_armys(direction):
-    need_locate = True
-    while True:
-        location = locateImages(*attack_army_names, color_sensitive=True)
-        if location is None:
-            logging.info("No attack army found")
-            break
-        place_army(location, direction, need_locate)
-        if need_locate:
-            need_locate = False
-    
-    for hero in attack_hero_names:
-        location = locateImages(hero, color_sensitive=True)
+def place_armys(move_func, projected_points):
+    move_func()
+    i = 0
+    for name in attack_army_names:
+        location = locateImages(name,color_sensitive=True)
         if location is None:
             continue
-        place_army(location, direction, need_locate)
+        pa.click(location,duration=0.2)
+        while locateImages(name, color_sensitive=True):
+            t = random.choice(projected_points)
+            pa.doubleClick( *t,duration=0.2)
+            sleep(0.02)
+            pa.doubleClick()
+            sleep(0.02)
+            pa.doubleClick()
+
+    t = random.choice(projected_points)
+    for hero_name in attack_hero_names:
+        clickImage(hero_name)
+        pa.click(*t,duration=0.2)
+
+
         
 
 
@@ -59,8 +69,8 @@ def attack():
     if clickImage("search_1") != 0:
         return -1
 
-    best_direction = choose_suitable_attack_target()
-    place_armys(best_direction)
+    move_func, projected_points = asyncio.run(choose_suitable_attack_target())
+    place_armys(move_func,projected_points)
 
 
     logging.info("Waiting for attack to complete...")
