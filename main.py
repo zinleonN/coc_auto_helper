@@ -16,6 +16,7 @@ def back_to_game():
 
 
 def main():
+    attack_needs = 1
     while True:
         if attack_needs >= 1:
             attack()
