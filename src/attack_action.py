@@ -46,11 +46,10 @@ def place_armys(move_func, projected_points):
         pa.click(location,duration=0.2)
         while locateImages(name, color_sensitive=True):
             t = random.choice(projected_points)
-            pa.doubleClick( *t,duration=0.2)
-            sleep(0.02)
-            pa.doubleClick()
-            sleep(0.02)
-            pa.doubleClick()
+            pa.moveTo(*t,duration=0.2)
+            pa.mouseDown()
+            sleep(2)
+            pa.mouseUp()
 
     t = random.choice(projected_points)
     for hero_name in attack_hero_names:

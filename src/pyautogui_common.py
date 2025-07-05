@@ -30,7 +30,7 @@ def moveToRightDown():
 def locateImages(*image_names, confidence=0.8, color_sensitive=False, min_saturation=40):
     import cv2
     import numpy as np
-    sleep(2.5)
+    sleep(0.5)
     for name in image_names:
         path = image_path(name)
         try:
