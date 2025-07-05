@@ -13,7 +13,7 @@ from src.pyautogui_common import (
 )
 
 attack_army_names = [
-    "attack_army_special_goblin", "attack_army_goblin",
+    "attack_army_special_goblin", "attack_army_goblin", "attack_army_dragon"
     ]
 
     # heros 
@@ -47,9 +47,9 @@ def place_armys(move_func, projected_points):
         while locateImages(name, color_sensitive=True):
             t = random.choice(projected_points)
             pa.moveTo(*t,duration=0.2)
-            pa.mouseDown()
-            sleep(2)
-            pa.mouseUp()
+            pa.click()
+            sleep(0.2)
+            pa.click()
 
     t = random.choice(projected_points)
     for hero_name in attack_hero_names:
