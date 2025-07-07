@@ -2,11 +2,17 @@ import pyautogui as pa
 import cv2
 import numpy as np
 import logging
+import random
+import asyncio
+import concurrent.futures
+from functools import partial
+import time
 
 from src.tools import sleep
 from src.tools import image_path
 from src.tools import fluctuate_number
 from src.yolo.detect import calculate_avg_distance_to_line
+import src.tools as tl
 
 
 screen_width, screen_height = pa.size()
@@ -76,7 +82,7 @@ def clickImage(*image_names, color_sensitive=False):
     logging.info(f"Attempting to click on images: [{names_str}]")
     location = locateImages(*image_names, color_sensitive=color_sensitive)
     if location:
-        pa.moveTo(location, duration=0.2)
+        move(pa.center(location))
         pa.click()
         return 0
     else:
@@ -89,20 +95,15 @@ def moveFromTo(start_point, end_point, duration=0.8, holding=0.01):
     end_x, end_y = radio_to_actural(end_point[0], end_point[1])
     
 
-    pa.moveTo(start_x, start_y, fluctuate_number(0.2))
+    move((start_x, start_y))
     pa.mouseDown()
     sleep(holding)    
 
-    pa.moveTo(end_x, end_y, d)
+    move((end_x, end_y))
     pa.mouseUp()
     sleep(0.1)
 
 
-import asyncio
-import concurrent.futures
-import logging
-import pyautogui
-from functools import partial
 
 async def detect_best_direction():
     """检测最佳方向，返回最佳方向的移动函数及其对应的映射点坐标"""
@@ -128,7 +129,7 @@ async def detect_best_direction():
             move_func()
             
             # 2. 截图
-            screenshot = pyautogui.screenshot()
+            screenshot = pa.screenshot()
             
             # 3. 计算坐标
             x, y = radio_to_actural(*coords)
@@ -164,26 +165,67 @@ async def detect_best_direction():
         logging.info(f"No valid direction (min distance {min_distance} >= {MAX_DISTANCE})")
         return None, []
 
-def place_army(location, direction, need_locate):
-    if not location:
-        logging.error("No location provided for placing army.")
+# def place_army(location, direction, need_locate):
+#     if not location:
+#         logging.error("No location provided for placing army.")
+#         return
+#     if direction == "left_up":
+#         if need_locate: moveToLeftUp()
+#         pa.click(location)
+#         moveFromTo((0.526,0.104), (0.151,0.584), duration=2, holding=1)
+#     elif direction == "left_down":
+#         if need_locate: moveToLeftDown()
+#         pa.click(location)
+#         moveFromTo((0.128,0.281), (0.453,0.759), duration=2, holding=1)
+#     elif direction == "right_up":
+#         if need_locate: moveToRightUp()
+#         pa.click(location)
+#         moveFromTo((0.475,0.082), (0.843,0.572), duration=2, holding=1)
+#     elif direction == "right_down":
+#         if need_locate: moveToRightDown()
+#         pa.click(location)
+#         moveFromTo((0.863,0.294), (0.509,0.797), duration=2, holding=1)
+#     else:
+#         logging.error(f"Unknown direction: {direction}. Cannot place army.")
+#         return
+
+
+def generate_bezier_curve(start, end, control_points, num_points=100):
+    """生成贝塞尔曲线点"""
+    points = []
+    for i in range(num_points + 1):
+        t = i / num_points
+        # 二次贝塞尔曲线公式
+        x = (1-t)**2 * start[0] + 2*(1-t)*t * control_points[0][0] + t**2 * end[0]
+        y = (1-t)**2 * start[1] + 2*(1-t)*t * control_points[0][1] + t**2 * end[1]
+        points.append((x, y))
+    return points
+
+def move(end_pos, duration = 0.6):
+    duration = tl.random_offset(duration)
+    start_pos = pa.position()
+    if start_pos == end_pos:
         return
-    if direction == "left_up":
-        if need_locate: moveToLeftUp()
-        pa.click(location)
-        moveFromTo((0.526,0.104), (0.151,0.584), duration=2, holding=1)
-    elif direction == "left_down":
-        if need_locate: moveToLeftDown()
-        pa.click(location)
-        moveFromTo((0.128,0.281), (0.453,0.759), duration=2, holding=1)
-    elif direction == "right_up":
-        if need_locate: moveToRightUp()
-        pa.click(location)
-        moveFromTo((0.475,0.082), (0.843,0.572), duration=2, holding=1)
-    elif direction == "right_down":
-        if need_locate: moveToRightDown()
-        pa.click(location)
-        moveFromTo((0.863,0.294), (0.509,0.797), duration=2, holding=1)
-    else:
-        logging.error(f"Unknown direction: {direction}. Cannot place army.")
-        return
+    pos_offset = tl.random_offset(30)
+    end_pos = (end_pos[0] + pos_offset, end_pos[1] + pos_offset)
+    distance = tl.distance(start_pos, end_pos)
+
+    if distance < 400:
+        pa.moveTo(end_pos, duration=duration, _pause=False)
+
+    mid_x = (start_pos[0] + end_pos[0]) / 2
+    mid_y = (start_pos[1] + end_pos[1]) / 2
+    offset =   random.randrange(80,120)
+    side = random.choice([-1, 1])
+    control_point = (
+        mid_x + side * offset * random.uniform(0.8, 1.2),
+        mid_y + side * offset * random.uniform(0.8, 1.2)
+    )
+
+    curve_points = generate_bezier_curve(start_pos, end_pos, [control_point])
+    duration_per_point = duration / len(curve_points)
+
+    for point in curve_points:
+        pa.moveTo(point[0], point[1], duration=duration_per_point, _pause=False)
+        time.sleep(duration_per_point)  # 更平滑
+

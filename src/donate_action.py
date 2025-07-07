@@ -7,7 +7,6 @@ from src.pyautogui_common import (
     clickImage,
     locateImages,
     detect_best_direction,
-    place_army
 )
 
 def ramdon_donate():
@@ -17,7 +16,9 @@ def ramdon_donate():
         "donate_army_wall_breaker", "donate_army_balloon", "donate_army_wizard", "donate_army_healer", 
         "donate_army_dragon", "donate_army_pekka", "donate_army_baby_dragon", "donate_army_miner",
         "donate_army_electro_dragon", "donate_army_yeti", "donate_army_dragon_rider", "donate_army_electro_titan", 
-        "donate_army_root_rider", "donate_army_minion", "donate_army_thrower", "donate_army_mi", "donate_army_electro_wizard"]
+        "donate_army_root_rider", "donate_army_minion", "donate_army_thrower", "donate_army_mi", "donate_army_electro_wizard",
+        "donate_lighting", "donate_posion"
+        ]
     
     while clickImage(*army_name, color_sensitive=True) == 0:
         pass

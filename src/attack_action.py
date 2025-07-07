@@ -9,7 +9,6 @@ from src.pyautogui_common import (
     clickImage,
     locateImages,
     detect_best_direction,
-    place_army
 )
 
 attack_army_names = [
